@@ -1,13 +1,19 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	Env_load()
+	fmt.Println(os.Getenv("HOGE"))
 	r := gin.Default()
 	// web
 	r.Use(cors)
@@ -17,6 +23,13 @@ func main() {
 		})
 	})
 	r.Run() // listen and serve on 0.0.0.0:8080
+}
+
+func Env_load() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 }
 
 func cors(c *gin.Context) {
