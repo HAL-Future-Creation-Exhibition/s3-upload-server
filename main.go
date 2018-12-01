@@ -102,7 +102,7 @@ func main() {
 			return
 		}
 
-		err = exec.Command("python", "main.py", "./tmp/" + "tmp-" + path, "./tmp/" + path).Run()
+		err = exec.Command("python3", "main.py", "./tmp/" + "tmp-" + path, "./tmp/" + path).Run()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"msg": "致命的エラー | 画像保存に失敗",
