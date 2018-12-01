@@ -12,6 +12,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"image/png"
+	"image/jpeg"
+	"image/gif"
+	"image"
+	"os/exec"
 )
 
 func main() {
@@ -25,6 +30,114 @@ func main() {
 			"message": "ヤッホー!!",
 		})
 	})
+	r.POST("/upload/icon", func(c *gin.Context) {
+		myS3, err := util.NewS3(os.Getenv("S3ACCESSKEY"), os.Getenv("S3SECKEY"), os.Getenv("REGION"), os.Getenv("BUCKETNAME"))
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(myS3)
+
+		path := c.DefaultQuery("path", "")
+
+		icon, err := c.FormFile("file")
+		if err != nil {
+			c.String(http.StatusBadRequest, fmt.Sprintf("get form err: %s", err.Error()))
+			return
+		}
+		file, err := icon.Open()
+		defer file.Close()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"msg": "fileOpenに失敗",
+			})
+			return
+		}
+
+		_, format, err := image.DecodeConfig(file)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"msg": "画像情報取得に失敗",
+			})
+			return
+		}
+
+		file, err = icon.Open()
+		defer file.Close()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"msg": "fileOpenに失敗",
+			})
+			return
+		}
+
+		img, _, err := image.Decode(file)
+		if err != nil {
+			fmt.Println(err)
+			c.JSON(http.StatusBadRequest, gin.H{
+				"msg": "画像デコードに失敗",
+			})
+			return
+		}
+
+		tmpf, err := os.Create("./tmp/" + "tmp-" + path)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"msg": "致命的エラー",
+			})
+			return
+		}
+		defer tmpf.Close()
+		switch format {
+		case "png":
+			err = png.Encode(tmpf, img)
+		case "jpeg":
+			err = jpeg.Encode(tmpf, img, nil)
+		case "gif":
+			err = gif.Encode(tmpf, img, nil)
+		}
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"msg": "致命的エラー | 画像保存に失敗",
+			})
+			return
+		}
+
+		err = exec.Command("python", "main.py", "./tmp/" + "tmp-" + path, "./tmp/" + path).Run()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"msg": "致命的エラー | 画像保存に失敗",
+			})
+			return
+		}
+
+		sendFile, _ := os.Open("./tmp/" + path)
+		defer file.Close()
+
+		params := &s3.PutObjectInput{
+			Bucket: aws.String(myS3.BucketName),  // Required
+			Key:    aws.String("nellow/" + path), // Required
+			ACL:    aws.String("public-read"),
+			Body:   sendFile,
+		}
+
+
+		resp, err := myS3.Svc.PutObject(params)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(resp)
+		fmt.Println(params)
+
+		err = exec.Command("rm", "./tmp/" + "tmp-" + path, "./tmp/" + path).Run()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"msg": "致命的エラー | 画像お掃除に失敗",
+			})
+			return
+		}
+
+	})
+
 	r.POST("/upload", func(c *gin.Context) {
 		myS3, err := util.NewS3(os.Getenv("S3ACCESSKEY"), os.Getenv("S3SECKEY"), os.Getenv("REGION"), os.Getenv("BUCKETNAME"))
 		if err != nil {
