@@ -104,6 +104,7 @@ func main() {
 
 		err = exec.Command("python3", "main.py", "./tmp/" + "tmp-" + path, "./tmp/" + path).Run()
 		if err != nil {
+			fmt.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"msg": "致命的エラー | 画像保存に失敗",
 			})
@@ -128,7 +129,7 @@ func main() {
 		fmt.Println(resp)
 		fmt.Println(params)
 
-		err = exec.Command("rm", "./tmp/" + "tmp-" + path, "./tmp/" + path).Run()
+		err = exec.Command("rm", "-f", "./tmp/" + "tmp-" + path + " ./tmp/" + path).Run()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"msg": "致命的エラー | 画像お掃除に失敗",
