@@ -102,7 +102,7 @@ func main() {
 			return
 		}
 
-		err = exec.Command("python3", "main.py", "./tmp/" + "tmp-" + path, "./tmp/" + path).Run()
+		err = exec.Command("/usr/bin/python3.6", "main.py", "./tmp/" + "tmp-" + path, "./tmp/" + path).Run()
 		if err != nil {
 			fmt.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{
